@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finora | Personal Finance</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("finoraTheme");
+        if (t !== "dark" && t !== "light") {
+          t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#07061a">
+  <meta name="description" content="Finora is a private, in-browser money tracker with recurring rules, budgets and analytics.">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+  <script src="fx.js" defer></script>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="logo" href="#" title="Go to Dashboard" aria-label="Finora, go to Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="3" y="6" width="18" height="15" rx="3" stroke="currentColor" stroke-width="2"/>
+        <path d="M3 10h18M16 14h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7 6V4a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </a>
+    <button class="side-link active" data-view="dashboard" title="Dashboard" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-7h-6v7H3z"/></svg>
+      <span class="side-text">Dashboard</span>
+    </button>
+    <button class="side-link" data-view="recurring" title="Recurring transactions">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg>
+      <span class="side-text">Recurring</span>
+    </button>
+    <button class="side-link" data-view="analytics" title="Analytics">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11h4v9M10 20V4h4v16M16 20v-7h4v7"/></svg>
+      <span class="side-text">Analytics</span>
+    </button>
+    <button class="side-link theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode">
+      <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <span class="side-text" id="themeLabel">Dark</span>
+    </button>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <a class="brand" href="#" title="Go to Dashboard">
+        <span class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="6" width="18" height="15" rx="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 10h18M16 14h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M7 6V4a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand-text">Finora<span class="brand-dot">.</span></span>
+      </a>
+      <div class="topbar-tools">
+        <p id="greeting">Your money, your control.</p>
+        <label for="currencySelect" class="sr-only">Currency</label>
+        <select id="currencySelect" title="Currency used for all amounts"></select>
+      </div>
+    </header>
+
+    <main id="dashboardView" class="dashboard-layout">
+      <section class="panel entry-panel" id="entryPanel">
+        <span class="eyebrow" id="formEyebrow">NEW TRANSACTION</span>
+        <h1>Log it.<br>See it. Own it.</h1>
+        <!--<p class="muted">A few details, one simple step.</p>-->
+
+        <form id="transactionForm" novalidate>
+          <label for="transactionDate">Transaction date</label>
+          <input type="date" id="transactionDate" required aria-describedby="dateError">
+          <p class="field-error" id="dateError" hidden></p>
+
+          <label for="amount">Amount (<span data-currency-code>INR</span>)</label>
+          <div class="input-prefix">
+            <span aria-hidden="true" data-currency-symbol>₹</span>
+            <input type="number" id="amount" min="0.01" max="1000000000" step="0.01"
+                   inputmode="decimal" placeholder="Enter amount" required aria-describedby="amountError">
+          </div>
+          <p class="field-error" id="amountError" hidden></p>
+
+          <label id="typeLabel">Transaction type</label>
+          <div class="type-options" role="radiogroup" aria-labelledby="typeLabel">
+            <label class="type-choice">
+              <input type="radio" name="transactionType" value="income">
+              <span>↗ Income</span>
+            </label>
+            <label class="type-choice">
+              <input type="radio" name="transactionType" value="expense" checked>
+              <span>↘ Expense</span>
+            </label>
+          </div>
+
+          <label for="category">Category</label>
+          <select id="category" required aria-describedby="categoryError">
+            <option value="">Choose a category</option>
+          </select>
+          <p class="field-error" id="categoryError" hidden></p>
+
+          <div id="customCategoryGroup" hidden>
+            <label for="customCategory">Custom category</label>
+            <input id="customCategory" maxlength="40" placeholder="Enter category" aria-describedby="customCategoryError">
+            <p class="field-error" id="customCategoryError" hidden></p>
+          </div>
+
+          <label for="note">Note <span class="optional">(optional)</span></label>
+          <input id="note" maxlength="80" placeholder="e.g. Lunch with team">
+          <div class="duplicate-warning" id="duplicateWarning" role="alert" hidden></div>
+
+          <button class="primary-btn" type="submit"><span id="submitLabel">Save transaction</span> <span class="btn-arrow" aria-hidden="true">→</span></button>
+          <button class="secondary-btn" type="button" id="cancelEdit" hidden>Cancel editing</button>
+        </form>
+        <p class="privacy-note">🔒 Saved in this browser only. Use “Backup” below to keep a copy.</p>
+      </section>
+
+      <section class="panel overview-panel">
+        <div class="section-heading">
+          <div><span class="eyebrow">YOUR OVERVIEW</span></div>
+          <div class="period-picker">
+            <label for="periodSelect" class="sr-only">Summary period</label>
+            <select id="periodSelect">
+              <option value="all">All time</option>
+              <option value="month">This month</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card income-card">
+            <span class="stat-label">TOTAL INCOME</span>
+            <strong id="totalIncome">0.00</strong>
+            <small class="period-label">All time</small>
+          </article>
+          <article class="summary-card expense-card">
+            <span class="stat-label">TOTAL EXPENSES</span>
+            <strong id="totalExpenses">0.00</strong>
+            <small class="period-label">All time</small>
+          </article>
+          <article class="summary-card balance-card">
+            <span class="stat-label">TOTAL BALANCE</span>
+            <strong id="totalBalance">0.00</strong>
+           <!-- <small>Income minus expenses</small>-->
+          </article>
+        </div>
+
+        <div class="section-heading transaction-heading">
+          <div><h2>Transactions</h2><p class="muted">Newest transactions first.</p></div>
+          <span class="count-pill" id="transactionCount">0 items</span>
+        </div>
+
+        <div class="filter-bar" role="search">
+          <div class="filter-field filter-search">
+            <label for="searchInput" class="sr-only">Search transactions</label>
+            <input type="search" id="searchInput" placeholder="Search category, note or amount   ( / )">
+          </div>
+          <div class="filter-field">
+            <label for="typeFilter" class="sr-only">Filter by type</label>
+            <select id="typeFilter">
+              <option value="all">All types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expenses</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="categoryFilter" class="sr-only">Filter by category</label>
+            <select id="categoryFilter">
+              <option value="all">All categories</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="rangeChipRow" class="range-chip-row" hidden></div>
+        <div id="transactionList" class="transaction-list" aria-live="polite"></div>
+        <button class="secondary-btn show-more" type="button" id="showMoreBtn" hidden>Show more</button>
+
+        <div class="data-tools">
+          <span class="muted">Your data</span>
+          <div class="data-tool-buttons">
+            <button class="secondary-btn" type="button" id="exportCsvBtn">Export CSV</button>
+            <button class="secondary-btn" type="button" id="exportJsonBtn">Backup (JSON)</button>
+            <button class="secondary-btn" type="button" id="importBtn">Restore backup</button>
+            <input type="file" id="importInput" accept="application/json,.json" hidden>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <main id="recurringView" class="recurring-page" hidden>
+      <div class="page-intro">
+        <span class="eyebrow">SET IT ONCE</span>
+        <h1>Recurring transactions</h1>
+        <p class="muted">Rent, salary, subscriptions: add them once and Finora records each one when it is due.</p>
+      </div>
+
+      <div class="recurring-layout">
+        <section class="panel entry-panel">
+          <span class="eyebrow">NEW RECURRING RULE</span>
+          <h2>Repeat a transaction</h2>
+          <form id="recurringForm" novalidate>
+            <label for="recType">Type</label>
+            <select id="recType">
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+
+            <label for="recCategory">Category</label>
+            <select id="recCategory" required><option value="">Choose a category</option></select>
+
+            <div id="recCustomGroup" hidden>
+              <label for="recCustom">Custom category</label>
+              <input id="recCustom" maxlength="40" placeholder="Enter category">
+            </div>
+
+            <label for="recAmount">Amount (<span data-currency-code>INR</span>)</label>
+            <div class="input-prefix">
+              <span aria-hidden="true" data-currency-symbol>₹</span>
+              <input type="number" id="recAmount" min="0.01" max="1000000000" step="0.01" inputmode="decimal" placeholder="Enter amount" required>
+            </div>
+
+            <label for="recFrequency">Repeats</label>
+            <select id="recFrequency">
+              <option value="monthly">Every month</option>
+              <option value="weekly">Every week</option>
+              <option value="yearly">Every year</option>
+            </select>
+
+            <label for="recStart">First date</label>
+            <input type="date" id="recStart" required>
+            <p class="field-hint">If this date is in the past, the missed entries are added for you.</p>
+
+            <label for="recEnd">Ends on <span class="optional">(optional)</span></label>
+            <input type="date" id="recEnd">
+
+            <label for="recNote">Note <span class="optional">(optional)</span></label>
+            <input id="recNote" maxlength="80" placeholder="e.g. Netflix">
+
+            <p class="field-error" id="recError" role="alert" hidden></p>
+            <button class="primary-btn" type="submit"><span id="recSubmitLabel">Add recurring transaction</span> <span class="btn-arrow" aria-hidden="true">→</span></button>
+          </form>
+        </section>
+
+        <section class="panel overview-panel">
+          <span class="eyebrow">YOUR RULES</span>
+          <div id="recurringSummary" class="summary-grid"></div>
+          <div class="section-heading transaction-heading">
+            <div><h2>Scheduled transactions</h2><p class="muted">Pause a rule any time. Past entries stay in your history.</p></div>
+            <span class="count-pill" id="recurringCount">0 rules</span>
+          </div>
+          <div id="recurringList" class="transaction-list" aria-live="polite"></div>
+        </section>
+      </div>
+    </main>
+
+    <main id="analyticsView" class="analytics-page" hidden>
+      <section class="panel analytics-panel">
+        <div class="section-heading analytics-heading">
+          <div><span class="eyebrow">MONTHLY REPORT</span><h2>Analytics overview</h2></div>
+          <div class="analytics-actions">
+            <button class="secondary-btn" id="printBtn" type="button">Print / PDF</button>
+            <div class="month-picker">
+              <label for="monthSelector">Month</label>
+              <select id="monthSelector"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="print-only" id="printHeader"></div>
+
+        <div class="analytics-empty" id="analyticsEmpty" hidden>
+          <p>Your analytics will appear here once you add a few transactions.</p>
+          <button class="primary-btn" id="emptyStartBtn" type="button">Add your first transaction <span class="btn-arrow" aria-hidden="true">→</span></button>
+        </div>
+
+        <div class="analytics-stats">
+          <article class="metric-card"><span>INCOME</span><strong id="monthlyIncome">0.00</strong><small>This month</small><span class="delta flat" id="incomeDelta"></span></article>
+          <article class="metric-card"><span>EXPENSES</span><strong id="monthlyExpenses">0.00</strong><small>This month</small><span class="delta flat" id="expensesDelta"></span></article>
+          <article class="metric-card"><span>NET SAVINGS</span><strong id="monthlyNet">0.00</strong><small id="savingsHint">Income minus expenses</small><span class="delta flat" id="netDelta"></span></article>
+          <article class="metric-card"><span>SAVINGS RATE</span><strong id="savingsRate">—</strong><small>Of monthly income</small><span class="delta flat" id="rateDelta"></span></article>
+        </div>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>Income vs expenses</h3><p class="muted">Compare the selected month.</p></div>
+            <div class="legend"><span><i class="dot income-dot"></i> Income</span><span><i class="dot expense-dot"></i> Expenses</span></div>
+          </div>
+          <div id="monthlyBarChart" class="comparison-chart"></div>
+        </article>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>Spending by day</h3><p class="muted">Each bar is one day. The line is your running total for the month.</p></div>
+            <div class="legend"><span><i class="dot expense-dot"></i> Daily spending</span><span><i class="dot line-dot"></i> Running total</span></div>
+          </div>
+          <div id="dailyChart" class="daily-chart"></div>
+          <div id="dailyStats" class="mini-stats"></div>
+        </article>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>Six-month money trend</h3><p class="muted">Compare income, expenses and monthly net.</p></div>
+            <div class="segmented" role="group" aria-label="Trend view">
+              <button type="button" class="seg active" data-trend="cards" aria-pressed="true">Cards</button>
+              <button type="button" class="seg" data-trend="chart" aria-pressed="false">Chart</button>
+            </div>
+          </div>
+          <div id="sixMonthTrend" class="trend-grid"></div>
+        </article>
+
+        <article class="chart-card spending-card">
+          <div class="spending-header">
+            <div>
+              <span class="eyebrow" id="pieEyebrow">EXPENSE ANALYSIS</span>
+              <h3 id="pieHeading">Where your money goes</h3>
+              <p>Click a slice or a category to see details.</p>
+            </div>
+            <div class="pie-controls">
+              <select id="pieTypeFilter" aria-label="Expenses or income">
+                <option value="expense">Expenses</option>
+                <option value="income">Income</option>
+              </select>
+              <select id="pieMonthFilter" aria-label="Choose period">
+                <option value="month">Selected month</option>
+                <option value="last3">Last 3 months</option>
+                <option value="last6">Last 6 months</option>
+                <option value="year">Selected year</option>
+                <option value="all">All time</option>
+                <option value="custom">Custom range</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pie-range-row" id="pieRangeRow" hidden>
+            <label for="pieFrom">From</label>
+            <input type="date" id="pieFrom">
+            <label for="pieTo">To</label>
+            <input type="date" id="pieTo">
+          </div>
+
+          <div class="pie-layout">
+            <div id="expensePieChart" class="expense-pie" role="img" aria-label="Expense breakdown by category">
+              <div class="pie-center">
+                <span id="pieCenterLabel">Total spent</span>
+                <strong id="pieTotal">0</strong>
+              </div>
+            </div>
+            <div id="pieLegend" class="pie-legend"></div>
+          </div>
+
+          <div id="pieCategoryDetails" class="pie-details" aria-live="polite">
+            Select a category to see details.
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>What changed since last month</h3><p class="muted">Click a category to see its transactions.</p></div>
+          </div>
+          <div id="categoryChanges" class="change-grid"></div>
+        </article>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>Monthly budget planner</h3><p class="muted">Set limits and see when spending goes over budget.</p></div>
+          </div>
+          <form id="budgetForm" class="tool-form">
+            <div><label for="budgetCategory">Expense category</label><select id="budgetCategory" required><option value="">Choose category</option></select></div>
+            <div><label for="budgetAmount">Monthly budget (<span data-currency-code>INR</span>)</label><input id="budgetAmount" type="number" min="1" step="0.01" inputmode="decimal" placeholder="e.g. 5000" required></div>
+            <button class="primary-btn" type="submit">Save budget</button>
+          </form>
+          <div id="budgetResults" class="result-list" aria-live="polite"></div>
+        </article>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>Savings goal</h3><p class="muted">Track a personal target using your recorded net balance.</p></div>
+          </div>
+          <form id="goalForm" class="tool-form">
+            <div><label for="goalName">Goal name</label><input id="goalName" maxlength="50" placeholder="e.g. New laptop" required></div>
+            <div><label for="goalAmount">Target amount (<span data-currency-code>INR</span>)</label><input id="goalAmount" type="number" min="1" step="0.01" inputmode="decimal" placeholder="e.g. 50000" required></div>
+            <button class="primary-btn" type="submit">Save goal</button>
+          </form>
+          <div id="goalResults" class="result-list" aria-live="polite"></div>
+        </article>
+
+        <article class="chart-card">
+          <div class="section-heading">
+            <div><h3>Smart money insights</h3><p class="muted">Observations based on your actual transactions.</p></div>
+          </div>
+          <div id="smartInsights" class="insights-grid" aria-live="polite"></div>
+        </article>
+      </section>
+    </main>
+    <footer class="footer">FINORA · PRIVATE BY DESIGN · <kbd>N</kbd> new entry · <kbd>/</kbd> search</footer>
+  </div>
+
+  <div id="toastRegion" class="toast-region" role="status" aria-live="polite"></div>
+</body>
+</html>
