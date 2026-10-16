@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💸 Finora — Personal Finance Tracker
+# 💸 Finora :  Personal Finance Tracker
 
 ### *Track Smarter. Spend Better. Save More.*
 
